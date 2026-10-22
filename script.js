@@ -40,7 +40,7 @@ let drops = [];          // Drops currently on the screen
 let dropMaker;           // Timer that creates drops regularly
 let countdown;           // Timer that counts down the seconds
 let lastFrame;           // Time of the last animation frame
-let catcherX = 0;        // Left edge of the water can, in pixels
+let catcherX = 0;        // Left edge of the bucket, in pixels
 const keysDown = {};     // Which arrow keys are being held
 
 startBtn.addEventListener("click", startGame);
@@ -99,30 +99,31 @@ function gameLoop(now) {
   if (!gameRunning) return;
 
   // Seconds since the last frame, so speed is the same on fast and slow screens
-  // (capped so drops can't skip past the can if the browser lags)
+  // (capped so drops can't skip past the bucket if the browser lags)
   const dt = Math.min((now - lastFrame) / 1000, 0.05);
   lastFrame = now;
 
   moveCatcherWithKeys(dt);
 
   const groundY = container.clientHeight;
-  const canTop = catcher.offsetTop;
-  const canLeft = catcherX;
-  const canRight = catcherX + catcher.offsetWidth;
+  const bucketTop = catcher.offsetTop;
+  const bucketLeft = catcherX;
+  const bucketRight = catcherX + catcher.offsetWidth;
 
   // Move each drop down and check whether it was caught or missed
   for (let i = drops.length - 1; i >= 0; i--) {
     const d = drops[i];
     d.y += FALL_SPEED * dt;
-    d.el.style.transform = `translateY(${d.y}px)`;
+    // Use translate (not transform) so the drop's rotation doesn't tilt its fall
+    d.el.style.translate = `0 ${d.y}px`;
 
     const centerX = d.x + d.size / 2;
     const bottom = d.y + d.size;
     const caught =
-      bottom >= canTop + 10 &&
-      d.y < canTop + 30 &&
-      centerX >= canLeft &&
-      centerX <= canRight;
+      bottom >= bucketTop + 10 &&
+      d.y < bucketTop + 30 &&
+      centerX >= bucketLeft &&
+      centerX <= bucketRight;
 
     if (caught) {
       if (d.isDirty) {
@@ -189,7 +190,7 @@ function flash(type) {
   container.classList.add(`flash-${type}`);
 }
 
-// ----- Moving the water can -----
+// ----- Moving the bucket -----
 
 function setCatcherX(x) {
   const maxX = container.clientWidth - catcher.offsetWidth;
@@ -201,7 +202,7 @@ function centerCatcher() {
   setCatcherX((container.clientWidth - catcher.offsetWidth) / 2);
 }
 
-// Mouse and finger: the can follows the pointer
+// Mouse and finger: the bucket follows the pointer
 container.addEventListener("pointermove", (e) => {
   const rect = container.getBoundingClientRect();
   setCatcherX(e.clientX - rect.left - catcher.offsetWidth / 2);
@@ -226,6 +227,6 @@ function moveCatcherWithKeys(dt) {
   if (dir !== 0) setCatcherX(catcherX + dir * CATCHER_SPEED * dt);
 }
 
-// Keep the can inside the box when the window is resized
+// Keep the bucket inside the box when the window is resized
 window.addEventListener("resize", () => setCatcherX(catcherX));
 window.addEventListener("load", centerCatcher);

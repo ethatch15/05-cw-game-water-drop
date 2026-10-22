@@ -20,14 +20,21 @@
         </div>
 
         <div id="game-container">
-            <!-- The player's water can. Move it with the mouse, finger, or arrow keys. -->
-            <img id="catcher" src="img/water-can-transparent.png" alt="Water can">
+            <!-- The player's bucket. Move it with the mouse, finger, or arrow keys. -->
+            <div id="catcher" aria-label="Bucket">
+                <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 18 Q50 -14 86 18" fill="none" stroke="#131313" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M8 18 H92 L82 76 Q81 79 78 79 H22 Q19 79 18 76 Z" fill="#FFC907" stroke="#131313" stroke-width="3" stroke-linejoin="round"/>
+                    <ellipse cx="50" cy="18" rx="42" ry="7" fill="#2E9DF7" stroke="#131313" stroke-width="3"/>
+                    <path d="M16 40 H84" stroke="#e6b400" stroke-width="4"/>
+                </svg>
+            </div>
 
             <!-- Shown before the game starts and after it ends -->
             <div id="message" class="message">
                 <h2 id="message-title">How to play</h2>
                 <p id="message-text">
-                    Move the water can to catch drops.<br>
+                    Move the bucket to catch drops.<br>
                     💧 Clean drop caught: <strong>+4 points</strong><br>
                     💧 Clean drop missed: <strong>−1 point</strong><br>
                     🟤 Dirty drop caught: <strong>lose a life</strong><br>

@@ -117,9 +117,14 @@ body {
     position: absolute;
     bottom: 10px;
     left: 0;
-    width: 90px;
+    width: 100px;
     pointer-events: none;
     user-select: none;
+}
+
+#catcher svg {
+    display: block;
+    width: 100%;
 }
 
 /* Drops are teardrop-shaped: round with one pointed corner on top */
@@ -196,6 +201,6 @@ body {
     }
 
     #catcher {
-        width: 70px;
+        width: 80px;
     }
 }
