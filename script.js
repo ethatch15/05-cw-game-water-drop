@@ -46,6 +46,9 @@ let lastFrame;           // Time of the last animation frame
 let catcherX = 0;        // Left edge of the bucket, in pixels
 const keysDown = {};     // Which arrow keys are being held
 
+// Show the winning score at the top
+document.getElementById("goal").textContent = WIN_SCORE;
+
 startBtn.addEventListener("click", startGame);
 
 function startGame() {

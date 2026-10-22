@@ -81,10 +81,15 @@ body {
 }
 
 .score,
+.goal,
 .lives,
 .timer {
     font-size: 22px;
     font-weight: bold;
+}
+
+.goal {
+    color: #159A48;
 }
 
 #start-btn {
@@ -243,6 +248,7 @@ body {
     }
 
     .score,
+    .goal,
     .lives,
     .timer {
         font-size: 16px;
