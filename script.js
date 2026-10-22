@@ -186,11 +186,13 @@ function endGame() {
   if (perfect) {
     messageTitle.textContent = "You win! 🎉";
     messageText.innerHTML = `Perfect game! You caught every clean drop.<br>Final score: <strong>${score}</strong>`;
-    launchConfetti();
   } else {
     messageTitle.textContent = won ? "You win! 🎉" : lives <= 0 ? "Out of lives!" : "Time's up!";
     messageText.innerHTML = `Final score: <strong>${score}</strong><br>${message}`;
   }
+
+  // Confetti for every win
+  if (won) launchConfetti();
 
   messageEl.classList.remove("hidden");
 
