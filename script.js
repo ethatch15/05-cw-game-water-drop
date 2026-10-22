@@ -27,6 +27,7 @@ const scoreEl = document.getElementById("score");
 const livesEl = document.getElementById("lives");
 const timeEl = document.getElementById("time");
 const startBtn = document.getElementById("start-btn");
+const resetBtn = document.getElementById("reset-btn");
 const messageEl = document.getElementById("message");
 const messageTitle = document.getElementById("message-title");
 const messageText = document.getElementById("message-text");
@@ -49,7 +50,12 @@ const keysDown = {};     // Which arrow keys are being held
 // Show the winning score at the top
 document.getElementById("goal").textContent = WIN_SCORE;
 
+// Remember the "How to play" box so Reset can show it again
+const howToPlayTitle = messageTitle.textContent;
+const howToPlayText = messageText.innerHTML;
+
 startBtn.addEventListener("click", startGame);
+resetBtn.addEventListener("click", resetGame);
 
 function startGame() {
   // Prevent multiple games from running at once
@@ -170,13 +176,36 @@ function removeDrop(index) {
   drops.splice(index, 1);
 }
 
-function endGame() {
-  if (!gameRunning) return;
+// Stop timers and clear the drops off the screen
+function stopGame() {
   gameRunning = false;
   clearInterval(dropMaker);
   clearInterval(countdown);
   drops.forEach((d) => d.el.remove());
   drops = [];
+}
+
+// Reset button: stop any game and go back to the start screen
+function resetGame() {
+  stopGame();
+  score = 0;
+  lives = START_LIVES;
+  timeLeft = GAME_TIME;
+  updateHud();
+  document.querySelectorAll(".confetti").forEach((c) => c.remove());
+
+  messageTitle.textContent = howToPlayTitle;
+  messageText.innerHTML = howToPlayText;
+  messageEl.classList.remove("hidden");
+
+  startBtn.disabled = false;
+  startBtn.textContent = "Start Game";
+  centerCatcher();
+}
+
+function endGame() {
+  if (!gameRunning) return;
+  stopGame();
 
   // A perfect game: caught every clean drop and no dirty ones
   const perfect = cleanCaught > 0 && cleanMissed === 0 && dirtyCaught === 0;
