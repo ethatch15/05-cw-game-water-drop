@@ -35,6 +35,9 @@ const messageText = document.getElementById("message-text");
 let gameRunning = false;
 let score = 0;
 let lives = START_LIVES;
+let cleanCaught = 0;     // Clean drops caught this game
+let cleanMissed = 0;     // Clean drops that hit the ground
+let dirtyCaught = 0;     // Dirty drops caught
 let timeLeft = GAME_TIME;
 let drops = [];          // Drops currently on the screen
 let dropMaker;           // Timer that creates drops regularly
@@ -53,6 +56,9 @@ function startGame() {
   gameRunning = true;
   score = 0;
   lives = START_LIVES;
+  cleanCaught = 0;
+  cleanMissed = 0;
+  dirtyCaught = 0;
   timeLeft = GAME_TIME;
   drops.forEach((d) => d.el.remove());
   drops = [];
@@ -128,15 +134,20 @@ function gameLoop(now) {
     if (caught) {
       if (d.isDirty) {
         lives--;
+        dirtyCaught++;
         flash("hit");
       } else {
         score += CLEAN_POINTS;
+        cleanCaught++;
         flash("catch");
       }
       removeDrop(i);
     } else if (d.y > groundY) {
       // Only clean drops cost points when they hit the ground
-      if (!d.isDirty) score -= MISS_PENALTY;
+      if (!d.isDirty) {
+        score -= MISS_PENALTY;
+        cleanMissed++;
+      }
       removeDrop(i);
     }
   }
@@ -164,13 +175,23 @@ function endGame() {
   drops.forEach((d) => d.el.remove());
   drops = [];
 
+  // A perfect game: caught every clean drop and no dirty ones
+  const perfect = cleanCaught > 0 && cleanMissed === 0 && dirtyCaught === 0;
+
   // Pick a random message from the right list
-  const won = score >= WIN_SCORE && lives > 0;
+  const won = perfect || (score >= WIN_SCORE && lives > 0);
   const list = won ? winMessages : loseMessages;
   const message = list[Math.floor(Math.random() * list.length)];
 
-  messageTitle.textContent = won ? "You win! 🎉" : lives <= 0 ? "Out of lives!" : "Time's up!";
-  messageText.innerHTML = `Final score: <strong>${score}</strong><br>${message}`;
+  if (perfect) {
+    messageTitle.textContent = "You win! 🎉";
+    messageText.innerHTML = `Perfect game! You caught every clean drop.<br>Final score: <strong>${score}</strong>`;
+    launchConfetti();
+  } else {
+    messageTitle.textContent = won ? "You win! 🎉" : lives <= 0 ? "Out of lives!" : "Time's up!";
+    messageText.innerHTML = `Final score: <strong>${score}</strong><br>${message}`;
+  }
+
   messageEl.classList.remove("hidden");
 
   startBtn.disabled = false;
@@ -188,6 +209,24 @@ function flash(type) {
   container.classList.remove("flash-catch", "flash-hit");
   void container.offsetWidth; // Restart the animation
   container.classList.add(`flash-${type}`);
+}
+
+// ----- Confetti -----
+
+// Drops colorful paper pieces from the top of the screen
+function launchConfetti() {
+  const colors = ["#FFC907", "#2E9DF7", "#8BD1CB", "#4FCB53", "#FF902A", "#F5402C", "#F16061"];
+  for (let i = 0; i < 150; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti";
+    piece.style.left = `${Math.random() * 100}vw`;
+    piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = `${2.5 + Math.random() * 2}s`;
+    piece.style.animationDelay = `${Math.random() * 0.8}s`;
+    piece.style.setProperty("--drift", `${Math.random() * 200 - 100}px`);
+    document.body.appendChild(piece);
+    piece.addEventListener("animationend", () => piece.remove());
+  }
 }
 
 // ----- Moving the bucket -----

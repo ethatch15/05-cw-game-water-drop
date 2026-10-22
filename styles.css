@@ -196,6 +196,24 @@ body {
     to   { box-shadow: none; }
 }
 
+/* Confetti pieces for a perfect game */
+.confetti {
+    position: fixed;
+    top: -20px;
+    width: 10px;
+    height: 16px;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 10;
+    animation: confettiFall linear forwards;
+}
+
+@keyframes confettiFall {
+    to {
+        transform: translate(var(--drift), 105vh) rotate(720deg);
+    }
+}
+
 /* Phones and small tablets */
 @media (max-width: 850px) {
     body {
