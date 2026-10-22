@@ -203,10 +203,12 @@ function centerCatcher() {
 }
 
 // Mouse and finger: the bucket follows the pointer
-container.addEventListener("pointermove", (e) => {
+function moveCatcherToPointer(e) {
   const rect = container.getBoundingClientRect();
   setCatcherX(e.clientX - rect.left - catcher.offsetWidth / 2);
-});
+}
+container.addEventListener("pointermove", moveCatcherToPointer);
+container.addEventListener("pointerdown", moveCatcherToPointer); // A tap jumps the bucket there
 container.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
 
 // Arrow keys (or A / D)
