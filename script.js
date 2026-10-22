@@ -1,45 +1,231 @@
-// Variables to control game state
-let gameRunning = false; // Keeps track of whether game is active or not
-let dropMaker; // Will store our timer that creates drops regularly
+// Game settings
+const GAME_TIME = 30;        // Seconds per game
+const START_LIVES = 3;       // Lives the player starts with
+const CLEAN_POINTS = 4;      // Points for catching a clean drop
+const MISS_PENALTY = 1;      // Points lost when a clean drop hits the ground
+const WIN_SCORE = 20;        // Score needed to win
+const DIRTY_CHANCE = 0.3;    // 30% of drops are dirty
+const FALL_SPEED = 180;      // Pixels per second drops fall
+const CATCHER_SPEED = 600;   // Pixels per second when using arrow keys
 
-// Wait for button click to start the game
-document.getElementById("start-btn").addEventListener("click", startGame);
+// Messages shown at the end of the game
+const winMessages = [
+  "Amazing! You brought clean water to a whole village!",
+  "You did it! Every drop counts, and you caught a lot of them.",
+  "Water hero! Clean water changes everything.",
+];
+const loseMessages = [
+  "So close! Try again and catch more clean drops.",
+  "Watch out for the dirty water! Give it another go.",
+  "Keep trying. Every drop counts!",
+];
+
+// Grab elements from the page
+const container = document.getElementById("game-container");
+const catcher = document.getElementById("catcher");
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
+const timeEl = document.getElementById("time");
+const startBtn = document.getElementById("start-btn");
+const messageEl = document.getElementById("message");
+const messageTitle = document.getElementById("message-title");
+const messageText = document.getElementById("message-text");
+
+// Variables to control game state
+let gameRunning = false;
+let score = 0;
+let lives = START_LIVES;
+let timeLeft = GAME_TIME;
+let drops = [];          // Drops currently on the screen
+let dropMaker;           // Timer that creates drops regularly
+let countdown;           // Timer that counts down the seconds
+let lastFrame;           // Time of the last animation frame
+let catcherX = 0;        // Left edge of the water can, in pixels
+const keysDown = {};     // Which arrow keys are being held
+
+startBtn.addEventListener("click", startGame);
 
 function startGame() {
   // Prevent multiple games from running at once
   if (gameRunning) return;
 
+  // Reset everything for a new game
   gameRunning = true;
+  score = 0;
+  lives = START_LIVES;
+  timeLeft = GAME_TIME;
+  drops.forEach((d) => d.el.remove());
+  drops = [];
+  updateHud();
 
-  // Create new drops every second (1000 milliseconds)
-  dropMaker = setInterval(createDrop, 1000);
+  messageEl.classList.add("hidden");
+  startBtn.disabled = true;
+  centerCatcher();
+
+  // Create a new drop every 0.8 seconds
+  dropMaker = setInterval(createDrop, 800);
+
+  // Count down once per second
+  countdown = setInterval(() => {
+    timeLeft--;
+    updateHud();
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+
+  // Start the animation loop
+  lastFrame = performance.now();
+  requestAnimationFrame(gameLoop);
 }
 
 function createDrop() {
-  // Create a new div element that will be our water drop
   const drop = document.createElement("div");
-  drop.className = "water-drop";
+  const isDirty = Math.random() < DIRTY_CHANCE;
+  drop.className = isDirty ? "water-drop dirty-drop" : "water-drop";
 
   // Make drops different sizes for visual variety
-  const initialSize = 60;
-  const sizeMultiplier = Math.random() * 0.8 + 0.5;
-  const size = initialSize * sizeMultiplier;
-  drop.style.width = drop.style.height = `${size}px`;
+  const size = 40 * (Math.random() * 0.5 + 0.75);
+  drop.style.width = `${size}px`;
+  drop.style.height = `${size}px`;
 
   // Position the drop randomly across the game width
-  // Subtract 60 pixels to keep drops fully inside the container
-  const gameWidth = document.getElementById("game-container").offsetWidth;
-  const xPosition = Math.random() * (gameWidth - 60);
-  drop.style.left = xPosition + "px";
+  const x = Math.random() * (container.clientWidth - size);
+  drop.style.left = `${x}px`;
 
-  // Make drops fall for 4 seconds
-  drop.style.animationDuration = "4s";
-
-  // Add the new drop to the game screen
-  document.getElementById("game-container").appendChild(drop);
-
-  // Remove drops that reach the bottom (weren't clicked)
-  drop.addEventListener("animationend", () => {
-    drop.remove(); // Clean up drops that weren't caught
-  });
+  container.appendChild(drop);
+  drops.push({ el: drop, x, y: -size, size, isDirty });
 }
+
+function gameLoop(now) {
+  if (!gameRunning) return;
+
+  // Seconds since the last frame, so speed is the same on fast and slow screens
+  // (capped so drops can't skip past the can if the browser lags)
+  const dt = Math.min((now - lastFrame) / 1000, 0.05);
+  lastFrame = now;
+
+  moveCatcherWithKeys(dt);
+
+  const groundY = container.clientHeight;
+  const canTop = catcher.offsetTop;
+  const canLeft = catcherX;
+  const canRight = catcherX + catcher.offsetWidth;
+
+  // Move each drop down and check whether it was caught or missed
+  for (let i = drops.length - 1; i >= 0; i--) {
+    const d = drops[i];
+    d.y += FALL_SPEED * dt;
+    d.el.style.transform = `translateY(${d.y}px)`;
+
+    const centerX = d.x + d.size / 2;
+    const bottom = d.y + d.size;
+    const caught =
+      bottom >= canTop + 10 &&
+      d.y < canTop + 30 &&
+      centerX >= canLeft &&
+      centerX <= canRight;
+
+    if (caught) {
+      if (d.isDirty) {
+        lives--;
+        flash("hit");
+      } else {
+        score += CLEAN_POINTS;
+        flash("catch");
+      }
+      removeDrop(i);
+    } else if (d.y > groundY) {
+      // Only clean drops cost points when they hit the ground
+      if (!d.isDirty) score -= MISS_PENALTY;
+      removeDrop(i);
+    }
+  }
+
+  updateHud();
+
+  if (lives <= 0) {
+    endGame();
+    return;
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+function removeDrop(index) {
+  drops[index].el.remove();
+  drops.splice(index, 1);
+}
+
+function endGame() {
+  if (!gameRunning) return;
+  gameRunning = false;
+  clearInterval(dropMaker);
+  clearInterval(countdown);
+  drops.forEach((d) => d.el.remove());
+  drops = [];
+
+  // Pick a random message from the right list
+  const won = score >= WIN_SCORE && lives > 0;
+  const list = won ? winMessages : loseMessages;
+  const message = list[Math.floor(Math.random() * list.length)];
+
+  messageTitle.textContent = won ? "You win! 🎉" : lives <= 0 ? "Out of lives!" : "Time's up!";
+  messageText.innerHTML = `Final score: <strong>${score}</strong><br>${message}`;
+  messageEl.classList.remove("hidden");
+
+  startBtn.disabled = false;
+  startBtn.textContent = "Play Again";
+}
+
+function updateHud() {
+  scoreEl.textContent = score;
+  timeEl.textContent = timeLeft;
+  livesEl.textContent = "❤️".repeat(Math.max(lives, 0)) + "🖤".repeat(START_LIVES - Math.max(lives, 0));
+}
+
+// Briefly color the container when a drop is caught
+function flash(type) {
+  container.classList.remove("flash-catch", "flash-hit");
+  void container.offsetWidth; // Restart the animation
+  container.classList.add(`flash-${type}`);
+}
+
+// ----- Moving the water can -----
+
+function setCatcherX(x) {
+  const maxX = container.clientWidth - catcher.offsetWidth;
+  catcherX = Math.min(Math.max(x, 0), maxX);
+  catcher.style.left = `${catcherX}px`;
+}
+
+function centerCatcher() {
+  setCatcherX((container.clientWidth - catcher.offsetWidth) / 2);
+}
+
+// Mouse and finger: the can follows the pointer
+container.addEventListener("pointermove", (e) => {
+  const rect = container.getBoundingClientRect();
+  setCatcherX(e.clientX - rect.left - catcher.offsetWidth / 2);
+});
+container.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+
+// Arrow keys (or A / D)
+document.addEventListener("keydown", (e) => {
+  if (["ArrowLeft", "ArrowRight", "a", "d"].includes(e.key)) {
+    keysDown[e.key] = true;
+    e.preventDefault();
+  }
+});
+document.addEventListener("keyup", (e) => {
+  keysDown[e.key] = false;
+});
+
+function moveCatcherWithKeys(dt) {
+  let dir = 0;
+  if (keysDown.ArrowLeft || keysDown.a) dir -= 1;
+  if (keysDown.ArrowRight || keysDown.d) dir += 1;
+  if (dir !== 0) setCatcherX(catcherX + dir * CATCHER_SPEED * dt);
+}
+
+// Keep the can inside the box when the window is resized
+window.addEventListener("resize", () => setCatcherX(catcherX));
+window.addEventListener("load", centerCatcher);
